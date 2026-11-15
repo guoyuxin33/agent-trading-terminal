@@ -55,6 +55,8 @@ Keys can alternatively be supplied through the environment (copy `.env.example` 
 
 Only the analyst and extra reviewers call the model. Risk and execution use ordinary deterministic code. A fixed set of BTCUSDT / ETHUSDT / SOLUSDT spot pairs is used in this first release.
 
+The bounded tool harness explicitly selects DeepSeek's non-thinking mode (`thinking.type=disabled`) because thinking mode rejects `tool_choice=required`. API failures retain the provider's error code and message, with authorization credentials redacted.
+
 ## Connect the official Binance MCP
 
 Official documentation: https://developers.binance.com/zh-CN/docs/agent-native/mcp-server/agentic

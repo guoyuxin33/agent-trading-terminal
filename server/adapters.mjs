@@ -11,7 +11,19 @@ export function safeError(error) {
 }
 export async function jsonFetch(url, options = {}, timeout = 12000) {
   const r = await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(timeout) });
-  if (!r.ok) throw new Error(`请求失败 HTTP ${r.status} (${new URL(url).hostname})`);
+  if (!r.ok) {
+    const body = await r.json().catch(() => null);
+    const detail = typeof body?.error?.message === 'string' ? body.error.message : typeof body?.message === 'string' ? body.message : '';
+    const code = typeof body?.error?.code === 'string' ? body.error.code : typeof body?.error?.type === 'string' ? body.error.type : '';
+    let message = `请求失败 HTTP ${r.status} (${new URL(url).hostname})${code ? ' [' + code + ']' : ''}${detail ? '：' + detail : ''}`;
+    const authorization = new Headers(options.headers).get('authorization');
+    if (authorization) {
+      for (const value of [authorization, authorization.replace(/^Bearer\s+/i, '')]) if (value) message = message.replaceAll(value, '[redacted]');
+    }
+    const error = new Error(safeError(message));
+    error.status = r.status;
+    throw error;
+  }
   return r.json();
 }
 
@@ -41,7 +53,8 @@ export class DeepSeek {
     const calls = [], started = Date.now();
     let usage = { prompt_tokens: 0, completion_tokens: 0 };
     for (let round = 0; round < 3; round++) {
-      const result = await jsonFetch(base + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this.key() }, body: JSON.stringify({ model, messages, tools, tool_choice: 'required', temperature: 0.2, max_tokens: 1000 }) }, 45000);
+      // DeepSeek's default thinking mode rejects tool_choice=required.
+      const result = await jsonFetch(base + '/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this.key() }, body: JSON.stringify({ model, messages, tools, thinking: { type: 'disabled' }, tool_choice: 'required', temperature: 0.2, max_tokens: 1000 }) }, 45000);
       usage.prompt_tokens += result.usage?.prompt_tokens || 0; usage.completion_tokens += result.usage?.completion_tokens || 0;
       const message = result.choices?.[0]?.message;
       if (!message?.tool_calls?.length) throw new Error('DeepSeek 未返回有效工具调用');
