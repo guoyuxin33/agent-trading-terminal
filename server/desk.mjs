@@ -14,7 +14,7 @@ export const defaultAgents = [
 export class Desk {
   constructor(store, deepseek, binance) {
     this.store = store; this.deepseek = deepseek; this.binance = binance;
-    this.settings = { feed: 'demo', intervalSeconds: 30, deepseekBase: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com', deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-flash', binanceClientId: process.env.BINANCE_OAUTH_CLIENT_ID || '', binanceTickerTool: '', ...store.get('settings', {}) };
+    this.settings = { feed: 'binance', intervalSeconds: 30, deepseekBase: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com', deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-flash', binanceClientId: process.env.BINANCE_OAUTH_CLIENT_ID || '', binanceTickerTool: '', ...store.get('settings', {}) };
     this.risk = { ...defaultRisk, ...store.get('risk', {}) };
     this.agents = store.get('agents', defaultAgents);
     this.states = {}; this.agents.forEach(a => { this.states[a.id] = { status: a.enabled ? 'idle' : 'disabled', task: '等待下一轮任务', runs: 0, latencyMs: 0 }; });
@@ -159,6 +159,8 @@ export class Desk {
       this.persist(); this.settings.feed = update.feed;
       this.account = this.store.get('account:' + update.feed, newAccount(update.feed));
       this.decisions = this.store.get('decisions:' + this.account.id, []); this.quotes = {}; this.lastRefresh = 0;
+      this.cycle = 0; this.activeSymbol = ''; this.startedAt = null; this.lastCycle = 0;
+      for (const a of this.agents) this.states[a.id] = { status: a.enabled ? 'idle' : 'disabled', task: '行情环境已切换，等待下一轮任务', runs: 0, latencyMs: 0 };
     }
     this.settings = { ...this.settings, ...update }; this.store.put('settings', this.settings); this.persist();
     this.log('SYSTEM', 'head', '连接设置已保存；演示与真实行情模拟账户独立记账');

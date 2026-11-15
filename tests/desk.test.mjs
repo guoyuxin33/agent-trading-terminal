@@ -59,8 +59,10 @@ test('MCP boundary blocks order, transfer and withdrawal tools', t => {
 });
 test('switching market environments preserves separate accounts', t => {
   const { desk } = fixture(t), id = desk.account.id;
+  desk.cycle = 12; desk.states.analyst.task = '执行演示策略'; desk.states.analyst.runs = 12;
   desk.updateSettings({ feed: 'binance' });
   assert.equal(desk.account.trades.length, 0); assert.equal(desk.account.cash, 10000); assert.notEqual(desk.account.id, id);
+  assert.equal(desk.cycle, 0); assert.equal(desk.states.analyst.runs, 0); assert.ok(!desk.states.analyst.task.includes('演示策略'));
   desk.updateSettings({ feed: 'demo' }); assert.equal(desk.account.id, id); assert.equal(desk.account.trades.length, 12);
 });
 test('custom reviewer veto prevents execution', async t => {
